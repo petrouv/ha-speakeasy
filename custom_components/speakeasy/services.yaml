@@ -1,0 +1,33 @@
+record_start:
+  fields:
+    url:
+      example: front_door
+      selector:
+        text:
+    entity_id:
+      selector:
+        entity:
+          domain: camera
+    server:
+      example: http://localhost:1984
+      selector:
+        text:
+    record_url:
+      selector:
+        text:
+
+record_stop:
+  fields:
+    url:
+      example: front_door
+      selector:
+        text:
+    entity_id:
+      selector:
+        entity:
+          domain: camera
+    server:
+      selector:
+        text:
+
+record_stop_all:

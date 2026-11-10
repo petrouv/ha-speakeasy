@@ -1,0 +1,6 @@
+# The plugin version sets the Home Assistant version: 0.13.375 installs 2026.10.4.
+pytest-homeassistant-custom-component==0.13.375
+ruff==0.17.3
+# Requirements of the camera and ffmpeg components, which the integration imports.
+PyTurboJPEG==1.8.3
+ha-ffmpeg==3.2.2

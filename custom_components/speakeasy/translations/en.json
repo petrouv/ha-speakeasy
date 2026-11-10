@@ -1,0 +1,151 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "go2rtc",
+        "description": "Address of the go2rtc API that serves the camera streams. It is prefilled with the one WebRTC Camera uses. The go2rtc built into Home Assistant cannot be used: it does not serve MP4 streams.",
+        "data": {
+          "url": "go2rtc address"
+        }
+      },
+      "reconfigure": {
+        "title": "go2rtc",
+        "description": "New address of the go2rtc API. Saving reloads Speakeasy, which finishes running recordings.",
+        "data": {
+          "url": "go2rtc address"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "go2rtc is not responding at this address.",
+      "invalid_url": "This is not a valid address."
+    },
+    "abort": {
+      "single_instance_allowed": "Speakeasy is already set up.",
+      "reconfigure_successful": "The go2rtc address is changed."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Recording",
+        "data": {
+          "folder": "Folder in Media",
+          "min_free_gb": "Minimum free space, GB",
+          "keep_days": "Keep recordings, days"
+        },
+        "data_description": {
+          "folder": "Recordings are saved under Media → My media → this folder.",
+          "min_free_gb": "A recording does not start, and a running one stops, when free space drops below this.",
+          "keep_days": "Older recordings in the folder are deleted once a day. 0 keeps everything."
+        }
+      }
+    },
+    "error": {
+      "invalid_folder": "Use letters, digits, `_` and `-`, with `/` between folders."
+    }
+  },
+  "entity": {
+    "binary_sensor": {
+      "recording": {
+        "name": "Recording"
+      }
+    }
+  },
+  "exceptions": {
+    "not_configured": {
+      "message": "Speakeasy is not running: it is not set up, is disabled or is reloading."
+    },
+    "invalid_source": {
+      "message": "The source is invalid: it needs either a url or a camera, a url and a record_url that are not empty, and a server only as a URL."
+    },
+    "camera_not_found": {
+      "message": "There is no camera {entity}."
+    },
+    "not_found": {
+      "message": "This source has no recording running, ending, being saved or starting."
+    },
+    "no_stream_source": {
+      "message": "The camera has no stream that go2rtc can record."
+    },
+    "no_stream_source_error": {
+      "message": "The camera has no stream that go2rtc can record. Home Assistant says: {detail}"
+    },
+    "disk_low": {
+      "message": "Not enough free space to record ({free} GB free)."
+    },
+    "go2rtc_error": {
+      "message": "go2rtc did not deliver the stream ({detail})."
+    },
+    "go2rtc_no_data": {
+      "message": "go2rtc closed the stream before sending any data."
+    },
+    "camera_unavailable": {
+      "message": "The camera did not answer; it may be asleep or offline. go2rtc says: {detail}"
+    },
+    "stream_not_found": {
+      "message": "go2rtc does not know this stream."
+    },
+    "media_dir_missing": {
+      "message": "Home Assistant has no local media folder."
+    },
+    "folder_not_writable": {
+      "message": "Cannot write to the recordings folder. System error: {detail}"
+    },
+    "stopped": {
+      "message": "The recording was stopped before it started, or Home Assistant is stopping."
+    },
+    "reminder_title": {
+      "message": "Speakeasy recording is still running"
+    },
+    "reminder_message": {
+      "message": "Recording of {name} has been running for {hours} h. Stop it from the card or with the `{action}` action."
+    }
+  },
+  "services": {
+    "record_start": {
+      "name": "Start recording",
+      "description": "Starts recording a camera into Media. Answers once go2rtc sends the first data; if the camera is already recording, returns that recording.",
+      "fields": {
+        "url": {
+          "name": "go2rtc stream",
+          "description": "Stream name in go2rtc, or a stream URL. Use this or the camera entity."
+        },
+        "entity_id": {
+          "name": "Camera",
+          "description": "Camera entity. Use this or the go2rtc stream."
+        },
+        "server": {
+          "name": "go2rtc address",
+          "description": "Another go2rtc instance instead of the configured one."
+        },
+        "record_url": {
+          "name": "Record from",
+          "description": "Another go2rtc stream to record, for example one with the camera's original audio."
+        }
+      }
+    },
+    "record_stop": {
+      "name": "Stop recording",
+      "description": "Stops the recording of a camera. Answers right away with its id, also when it is already ending or being saved; the event `speakeasy_recording_finished` follows only once the file is saved. A start still waiting for the camera's first data is stopped too, with no file and no event.",
+      "fields": {
+        "url": {
+          "name": "go2rtc stream",
+          "description": "The stream the recording was started with."
+        },
+        "entity_id": {
+          "name": "Camera",
+          "description": "The camera the recording was started with."
+        },
+        "server": {
+          "name": "go2rtc address",
+          "description": "The go2rtc address the recording was started with, if any."
+        }
+      }
+    },
+    "record_stop_all": {
+      "name": "Stop all recordings",
+      "description": "Stops every running recording, and every start still waiting for the camera's first data. Answers right away with the ids of every recording not yet saved or failed, ones already ending or being saved included."
+    }
+  }
+}
