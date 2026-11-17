@@ -32,12 +32,14 @@
         "data": {
           "folder": "Folder in Media",
           "min_free_gb": "Minimum free space, GB",
-          "keep_days": "Keep recordings, days"
+          "keep_days": "Keep recordings, days",
+          "g711_aac": "Save G.711 sound as AAC"
         },
         "data_description": {
           "folder": "Recordings are saved under Media → My media → this folder.",
           "min_free_gb": "A recording does not start, and a running one stops, when free space drops below this.",
-          "keep_days": "Older recordings in the folder are deleted once a day. 0 keeps everything."
+          "keep_days": "Older recordings in the folder are deleted once a day. 0 keeps everything.",
+          "g711_aac": "On: a camera's G.711 sound (Tapo and others) is converted to AAC and the file is MP4, which plays everywhere. Off: the camera's own sound is kept in MOV, which Chrome, Edge and Brave do not play."
         }
       }
     },

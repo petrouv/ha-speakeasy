@@ -31,9 +31,11 @@ from homeassistant.util.ulid import ulid_now
 
 from .const import (
     CONF_FOLDER,
+    CONF_G711_AAC,
     CONF_KEEP_DAYS,
     CONF_MIN_FREE_GB,
     DEFAULT_FOLDER,
+    DEFAULT_G711_AAC,
     DEFAULT_KEEP_DAYS,
     DEFAULT_MIN_FREE_GB,
     DOMAIN,
@@ -270,21 +272,37 @@ def camera_slug(source: Source) -> str:
 
 
 def ffmpeg_command(
-    binary: str, part: Path, output: Path, *, hevc: bool = False, g711: str | None = None
+    binary: str,
+    part: Path,
+    output: Path,
+    *,
+    hevc: bool = False,
+    g711: str | None = None,
+    aac: bool = False,
 ) -> list[str]:
     """Command that turns a fragmented MP4 into a regular file, with the index in front.
 
-    Video and audio are copied as the device sends them, never transcoded (owner's
-    decision). A missing audio track is fine (`0:a?`).
+    Video is copied as the device sends it, never transcoded; so is audio, except G.711
+    with `aac`. A missing audio track is fine (`0:a?`).
 
     Args:
         hevc: the video is H.265; it is tagged `hvc1`, the only tag Apple players accept.
         g711: the camera sends G.711 (`pcm_alaw` or `pcm_mulaw`), which go2rtc passed
             on as FLAC. Encoding it back gives the camera's own bytes, and the file is
             MOV: MP4 can't hold G.711.
+        aac: with `g711`, encode the sound to AAC in MP4 instead (the owner's option, on
+            by default): browsers on Chromium do not play MOV, and Apple players drop
+            G.711 from a file named `.mp4`. G.711 is 8 kHz, so 32 kbit/s loses nothing
+            audible.
     """
     video_tag = ["-tag:v", "hvc1"] if hevc else []
-    audio = ["-c:a", g711] if g711 else []
+    mov = bool(g711) and not aac
+    if g711 and aac:
+        audio = ["-c:a", "aac", "-b:a", "32k"]
+    elif g711:
+        audio = ["-c:a", g711]
+    else:
+        audio = []
     return [
         binary,
         "-hide_banner",
@@ -304,7 +322,7 @@ def ffmpeg_command(
         "-movflags",
         "+faststart",
         "-f",
-        "mov" if g711 else "mp4",
+        "mov" if mov else "mp4",
         str(output),
     ]
 
@@ -366,9 +384,11 @@ def _delete_older_than(folder: Path, days: int) -> list[str]:
 
 
 async def finalize_part(
-    hass: HomeAssistant, part: Path, g711: str | None = None
+    hass: HomeAssistant, part: Path, g711: str | None = None, *, aac: bool = False
 ) -> tuple[Path, bool, str | None] | None:
-    """Remux a `.part` file into the final MP4, or MOV for G.711 audio (see `ffmpeg_command`).
+    """Remux a `.part` file into the final MP4, or MOV for G.711 audio kept as is.
+
+    See `ffmpeg_command` for `g711` and `aac`.
 
     Returns:
         `(path, finalized, error)`, or `None` when the part held no data and was removed,
@@ -384,10 +404,12 @@ async def finalize_part(
         await add_job(part.unlink, True)
         return None
     raw = part.with_name(part.name.removesuffix(PART_SUFFIX))
-    output = raw.with_suffix(".mov") if g711 else raw
+    output = raw.with_suffix(".mov") if g711 and not aac else raw
     temporary = output.with_name(f"{output.name}.tmp")
     hevc = await add_job(_is_hevc, part)
-    command = ffmpeg_command(get_ffmpeg_manager(hass).binary, part, temporary, hevc=hevc, g711=g711)
+    command = ffmpeg_command(
+        get_ffmpeg_manager(hass).binary, part, temporary, hevc=hevc, g711=g711, aac=aac
+    )
     try:
         error = await _run_ffmpeg(command)
         if error is None:
@@ -463,6 +485,11 @@ class RecordingManager:
     def min_free_bytes(self) -> int:
         """Free space below which recordings stop."""
         return int(self.entry.options.get(CONF_MIN_FREE_GB, DEFAULT_MIN_FREE_GB) * GIGABYTE)
+
+    @property
+    def g711_aac(self) -> bool:
+        """Whether G.711 sound is saved as AAC in MP4 rather than as is in MOV."""
+        return bool(self.entry.options.get(CONF_G711_AAC, DEFAULT_G711_AAC))
 
     @property
     def recordings(self) -> list[Recording]:
@@ -820,7 +847,7 @@ class RecordingManager:
                 g711 = task.result()
         size = 0
         try:
-            finalized = await finalize_part(self.hass, recording.part_path, g711)
+            finalized = await finalize_part(self.hass, recording.part_path, g711, aac=self.g711_aac)
         except OSError as err:
             # Not raised: `done` and `failed` must still come, or stops and the sensor hang.
             finalized = None

@@ -208,9 +208,9 @@ def held_finalize() -> Iterator[asyncio.Event]:
     release = asyncio.Event()
     finalize = recorder.finalize_part
 
-    async def held(*args):
+    async def held(*args, **kwargs):
         await release.wait()
-        return await finalize(*args)
+        return await finalize(*args, **kwargs)
 
     with patch.object(recorder, "finalize_part", held):
         try:
@@ -249,9 +249,9 @@ def saved_parts(hass: HomeAssistant) -> Iterator[list[bytes]]:
     # Captured here, before a test patches `async_add_executor_job` to hold its writes.
     add_job, finalize = hass.async_add_executor_job, recorder.finalize_part
 
-    async def reading(hass_: HomeAssistant, part: Path, g711=None):
+    async def reading(hass_: HomeAssistant, part: Path, g711=None, **kwargs):
         saved.append(await add_job(part.read_bytes))
-        return await finalize(hass_, part, g711)
+        return await finalize(hass_, part, g711, **kwargs)
 
     with patch.object(recorder, "finalize_part", reading):
         yield saved

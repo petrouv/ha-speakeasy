@@ -29,7 +29,12 @@ from pytest_homeassistant_custom_component.common import (
 )
 
 from custom_components.speakeasy import recorder
-from custom_components.speakeasy.const import CONF_KEEP_DAYS, CONF_MIN_FREE_GB, DOMAIN
+from custom_components.speakeasy.const import (
+    CONF_G711_AAC,
+    CONF_KEEP_DAYS,
+    CONF_MIN_FREE_GB,
+    DOMAIN,
+)
 from custom_components.speakeasy.go2rtc import parse_g711
 from custom_components.speakeasy.recorder import (
     RecordingError,
@@ -179,10 +184,29 @@ def audio_bytes(path: Path, raw_format: str) -> bytes:
     ).stdout
 
 
+async def test_g711_becomes_aac_in_mp4_by_default(
+    hass: HomeAssistant, loaded: MockConfigEntry, go2rtc: FakeGo2rtc, samples: dict[str, bytes]
+) -> None:
+    """G.711 that go2rtc sent as FLAC is encoded to AAC in MP4, which every browser plays."""
+    go2rtc.body, go2rtc.content_type = samples["g711"], G711_CONTENT_TYPE
+    go2rtc.medias = TAPO_MEDIAS
+    rec = await manager(loaded).async_start(Source(url="door"))
+    await asyncio.sleep(0.3)
+    result = await manager(loaded).async_stop(rec)
+
+    assert result.finalized and result.path.name == rec.part_path.name.removesuffix(".part")
+    streams = {s["codec_type"]: s for s in probe(result.path)["streams"]}
+    assert streams["video"]["codec_name"] == "hevc"
+    assert streams["video"]["codec_tag_string"] == "hvc1"
+    assert streams["audio"]["codec_name"] == "aac"
+    assert streams["audio"]["sample_rate"] == "8000"
+
+
 async def test_g711_is_restored_in_mov(
     hass: HomeAssistant, loaded: MockConfigEntry, go2rtc: FakeGo2rtc, samples: dict[str, bytes]
 ) -> None:
-    """G.711 that go2rtc sent as FLAC ends up as the camera's own A-law bytes, in MOV."""
+    """With AAC off, G.711 ends up as the camera's own A-law bytes, in MOV."""
+    hass.config_entries.async_update_entry(loaded, options={CONF_G711_AAC: False})
     go2rtc.body, go2rtc.content_type = samples["g711"], G711_CONTENT_TYPE
     go2rtc.medias = TAPO_MEDIAS
     rec = await manager(loaded).async_start(Source(url="door"))

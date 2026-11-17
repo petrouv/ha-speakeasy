@@ -14,6 +14,7 @@ from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.speakeasy.const import (
     CONF_FOLDER,
+    CONF_G711_AAC,
     CONF_KEEP_DAYS,
     CONF_MIN_FREE_GB,
     DEFAULT_URL,
@@ -83,11 +84,23 @@ async def test_options_do_not_reload(
     )
     assert result["errors"] == {CONF_FOLDER: "invalid_folder"}
     result = await hass.config_entries.options.async_configure(
-        result["flow_id"], {CONF_FOLDER: "/cameras/door/", CONF_MIN_FREE_GB: 5, CONF_KEEP_DAYS: 30}
+        result["flow_id"],
+        {
+            CONF_FOLDER: "/cameras/door/",
+            CONF_MIN_FREE_GB: 5,
+            CONF_KEEP_DAYS: 30,
+            CONF_G711_AAC: False,
+        },
     )
     assert result["type"] is FlowResultType.CREATE_ENTRY
     await hass.async_block_till_done()
-    assert loaded.options == {CONF_FOLDER: "cameras/door", CONF_MIN_FREE_GB: 5, CONF_KEEP_DAYS: 30}
+    assert loaded.options == {
+        CONF_FOLDER: "cameras/door",
+        CONF_MIN_FREE_GB: 5,
+        CONF_KEEP_DAYS: 30,
+        CONF_G711_AAC: False,
+    }
+    assert not manager.g711_aac
     assert loaded.runtime_data is manager
     assert manager.folder == media_dir / "cameras" / "door"
 

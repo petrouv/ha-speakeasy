@@ -11,6 +11,7 @@ from homeassistant.const import CONF_URL
 from homeassistant.core import callback
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.selector import (
+    BooleanSelector,
     NumberSelector,
     NumberSelectorConfig,
     NumberSelectorMode,
@@ -21,9 +22,11 @@ from homeassistant.helpers.selector import (
 
 from .const import (
     CONF_FOLDER,
+    CONF_G711_AAC,
     CONF_KEEP_DAYS,
     CONF_MIN_FREE_GB,
     DEFAULT_FOLDER,
+    DEFAULT_G711_AAC,
     DEFAULT_KEEP_DAYS,
     DEFAULT_MIN_FREE_GB,
     DOMAIN,
@@ -142,6 +145,9 @@ class SpeakeasyOptionsFlow(OptionsFlow):
                 vol.Required(
                     CONF_KEEP_DAYS, default=values.get(CONF_KEEP_DAYS, DEFAULT_KEEP_DAYS)
                 ): _number(MAX_KEEP_DAYS),
+                vol.Required(
+                    CONF_G711_AAC, default=values.get(CONF_G711_AAC, DEFAULT_G711_AAC)
+                ): BooleanSelector(),
             }
         )
         return self.async_show_form(step_id="init", data_schema=schema, errors=errors)

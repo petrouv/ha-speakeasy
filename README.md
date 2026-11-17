@@ -43,6 +43,7 @@ credentials.
 | Folder | `speakeasy` | Folder inside the Home Assistant media folder (`/media` on Home Assistant OS); nested folders like `cameras/door` work. Letters, digits, `_` and `-` only. |
 | Minimum free space, GB | `2` | Below it a recording does not start, or stops. |
 | Keep recordings, days | `0` | Older `.mp4` and `.mov` files directly in the folder are deleted at each integration start and once a day. `0` keeps them forever. |
+| Save G.711 sound as AAC | on | G.711 sound is encoded to AAC and the file is MP4, which plays everywhere. Off keeps the camera's own G.711 bytes in MOV: Apple players and VLC play it, browsers on Chromium (Chrome, Edge, Brave) do not. |
 
 Options apply at once and do not interrupt recordings.
 
@@ -92,7 +93,7 @@ card's `streams`. The card records the first one, whichever is shown.
 |---|---|
 | H.264 or H.265 video | copied; H.265 is tagged `hvc1`, so QuickTime and iOS play it |
 | AAC or Opus sound | `.mp4`, copied |
-| G.711 sound (PCMA, PCMU, as Tapo cameras send it) | `.mov` with the camera's own bytes (go2rtc sends it as FLAC, twice the size; it is turned back) |
+| G.711 sound (PCMA, PCMU, as Tapo cameras send it) | `.mp4` with AAC (8 kHz, 32 kbit/s); with **Save G.711 sound as AAC** off, `.mov` with the camera's own bytes (go2rtc sends it as FLAC, twice the size; it is turned back) |
 | other PCM sound | `.mp4` with FLAC, as go2rtc sends it |
 
 Some cameras gate quiet sound to digital silence when their microphone noise reduction is on. If a recording is silent
@@ -116,7 +117,7 @@ while the room is not, turn that setting off.
   for 10 seconds, then fails with `camera_unavailable` and go2rtc's reason. A camera in a sleep or privacy mode must be
   woken up first. The start time, the file name and the duration count from the first data.
 - **File.** The stream is written to `<camera>_<YYYYMMDD_HHMMSS>.mp4.part` (local time of the first data). When the
-  recording ends, ffmpeg turns it into a regular MP4 (MOV for G.711) with the index in front. A file ffmpeg fails on
+  recording ends, ffmpeg turns it into a regular MP4 (MOV for G.711 kept as is) with the index in front. A file ffmpeg fails on
   stays `.mp4` in its streaming form.
 - **No time limit.** A recording stops by itself, with the file saved, for these reasons:
   - `disk_low`: free space dropped below the minimum (checked every 10 seconds);
@@ -193,7 +194,7 @@ The `media` folder must be in `allowlist_external_dirs` for `telegram_bot` to re
 - A recording of a stream nobody watches opens its own connection to the camera. A camera that allows few connections
   may refuse it when other systems hold the rest.
 - A file plays only where its codecs do: H.265 does not play in some browsers, Opus may not play in QuickTime or the iOS
-  Photos app, and Chrome and Firefox may play G.711 in `.mov` without sound.
+  Photos app, and browsers on Chromium (Chrome, Edge, Brave) do not play `.mov` at all, neither in Media nor by a link.
 
 ## Security
 

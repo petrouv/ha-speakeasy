@@ -15,10 +15,13 @@ WEBRTC_DOMAIN = "webrtc"
 CONF_FOLDER = "folder"
 CONF_MIN_FREE_GB = "min_free_gb"
 CONF_KEEP_DAYS = "keep_days"
+CONF_G711_AAC = "g711_aac"
 
 DEFAULT_FOLDER = "speakeasy"
 DEFAULT_MIN_FREE_GB = 2
 DEFAULT_KEEP_DAYS = 0
+# Browsers on Chromium do not play MOV, and Apple players drop G.711 from MP4.
+DEFAULT_G711_AAC = True
 
 MAX_MIN_FREE_GB = 1000
 MAX_KEEP_DAYS = 3650
