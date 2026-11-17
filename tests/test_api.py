@@ -45,7 +45,7 @@ async def test_info_after_entry_removed(
     msg = await client.receive_json()
     assert msg["success"]
     assert msg["result"] == {
-        "version": "0.1.1",
+        "version": "0.1.2",
         "protocol": 1,
         "features": ["record"],
         "configured": False,

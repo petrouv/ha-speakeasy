@@ -14,7 +14,8 @@ connection does not stop them.
   are not supported yet). Usually this is the go2rtc of the [WebRTC Camera](https://github.com/AlexxIT/WebRTC)
   integration. The go2rtc built into Home Assistant Core does not work: it listens on a private socket and does not
   know your streams.
-- The `ffmpeg` integration (loaded by default).
+- The `ffmpeg` binary, included in Home Assistant OS and Container. Without it a recording stays the raw stream
+  (`finalized: false`).
 
 ## Installation
 
@@ -39,9 +40,9 @@ credentials.
 
 | Option | Default | Description |
 |---|---|---|
-| Folder | `speakeasy` | Folder inside the Home Assistant media folder (`/media` on Home Assistant OS); nested folders like `cameras/door` work. |
+| Folder | `speakeasy` | Folder inside the Home Assistant media folder (`/media` on Home Assistant OS); nested folders like `cameras/door` work. Letters, digits, `_` and `-` only. |
 | Minimum free space, GB | `2` | Below it a recording does not start, or stops. |
-| Keep recordings, days | `0` | Older `.mp4` and `.mov` files directly in the folder are deleted once a day. `0` keeps them forever. |
+| Keep recordings, days | `0` | Older `.mp4` and `.mov` files directly in the folder are deleted at each integration start and once a day. `0` keeps them forever. |
 
 Options apply at once and do not interrupt recordings.
 
@@ -99,10 +100,13 @@ while the room is not, turn that setting off.
 
 ## How a recording works
 
-- **One recording per source.** A source is a go2rtc stream name or a camera entity, with its `server`. Cards and
+- **One recording per source.** A source is `url` (a go2rtc stream name or a source address such as
+  `rtsp://…`) or a camera entity, with its `server`. Cards and
   actions naming the same source share one recording on any device, and starting it again returns the running one.
   Spaces around values (in `url` and `record_url` too), trailing slashes in `server` and the case of an entity id are
-  ignored; no `server` and the configured address written out are different sources. A start right after the
+  ignored; no `server` and the configured address written out are different sources. Any spelling of the configured
+  address is accepted as `server`, but only spaces and trailing slashes are ignored when matching, so write it exactly
+  as the card does. A start right after the
   recording ends waits for its file to close and begins a new one.
 - **What is recorded.** A stream name as is; a camera entity from its stream source, which need not be in go2rtc.
   `record_url` records another source instead.
@@ -126,7 +130,7 @@ while the room is not, turn that setting off.
 - **Reminder.** For each hour a recording runs, a persistent notification names the camera.
 - **Leftovers.** `.part` files left by a crash, a power cut, a cut save or a failed save are finished each time the
   integration starts (Home Assistant start, Reload, Reconfigure, re-enabling), if they are in the folder set then. A
-  file finished this way stays MP4 with FLAC, since the camera's codec is no longer known.
+  G.711 recording finished this way stays MP4 with FLAC, since the camera's codec is no longer known.
 
 Recordings are in **Media → My media → <folder>**, where they can be played, downloaded and deleted.
 
@@ -143,8 +147,8 @@ Each returns a response when called with one.
 
 | Action | Fields | Description |
 |---|---|---|
-| `speakeasy.record_start` | `url` or `entity_id`, optional `server` (only the configured address), `record_url` | Starts a recording, or returns the running one. Replies at the first data: `{id, started_at}`. |
-| `speakeasy.record_stop` | `url` or `entity_id`, optional `server` | Stops the source's recording and replies at once with `{id}`: the recording whose outcome is pending (running or ending, else the newest one saving). The file is saved in the background, then `speakeasy_recording_finished` fires. A start still waiting for data is cancelled with `stopped`; when that is all the source has, `id` is `null`. Fails with `not_found` when the source has nothing to stop. |
+| `speakeasy.record_start` | `url` or `entity_id`, optional `server` (only the configured address), `record_url` | Starts a recording, or returns the running one. Replies at the first data: `{id, started_at}`. Fails with `camera_not_found` for an entity Home Assistant does not know. |
+| `speakeasy.record_stop` | `url` or `entity_id`, optional `server` (as given at the start; another address finds nothing: `not_found`) | Stops the source's recording and replies at once with `{id}`: the recording whose outcome is pending (running or ending, else the newest one saving). The file is saved in the background, then `speakeasy_recording_finished` fires. A start still waiting for data is cancelled with `stopped`; when that is all the source has, `id` is `null`. Fails with `not_found` when the source has nothing to stop. |
 | `speakeasy.record_stop_all` | — | Stops every recording and every start waiting for data. Replies at once with `{ids}`: every recording whose outcome is pending, oldest first, including ones already ending or saving. |
 
 ## Event
@@ -155,7 +159,7 @@ fires none, unless its data was kept and is saved at a later start.
 | Field | Description |
 |---|---|
 | `id`, `name` | Recording id and camera name: the entity's name, or for a `url` its scheme, host and port without login, path or query (`rtsp://192.168.1.20:554`), so channels of one recorder share a name; an `exec:` or `echo:` source keeps only the program. |
-| `entity_id` / `url` | The source; the other one is `null`. Passwords in a `url` and the arguments of `exec:` and `echo:` are masked. |
+| `entity_id` / `url` | The source; the other one is `null`. An RTSP address, or any address with a login, is replaced whole by `rtsp://***` (`scheme://***`), so use `name` to tell such cameras apart; a stream name is kept as is. The arguments of `exec:` and `echo:` are masked. |
 | `path`, `filename` | The file, named after the camera and the start time: `front_door_20261112_093000.mp4` for `camera.front_door`. A `url` gives its stream name, or `camera` for an address. |
 | `media_content_id` | The file in Home Assistant media, for `media_player.play_media` or a download link. |
 | `duration` | Seconds from the first data to the last, so a stall's silent 30 seconds are not counted. |
@@ -163,7 +167,7 @@ fires none, unless its data was kept and is saved at a later start.
 | `finalized` | `false` if ffmpeg failed or could not run and the file is the raw stream; `error` then says why. |
 
 For a `.part` file finished at startup `id`, `name`, `entity_id` and `url` are absent, `duration` is `0` and `reason`
-is empty.
+is `null`.
 
 Example: send the door camera's recordings to Telegram.
 
@@ -195,7 +199,7 @@ The `media` folder must be in `allowlist_external_dirs` for `telegram_bot` to re
 
 - Recording only reads the stream: a `stream.mp4` consumer cannot send audio, so a doorbell speaker never plays
   anything.
-- Passwords in camera addresses and the arguments of `exec:` and `echo:` sources are masked in the log and the event
+- Camera addresses (RTSP or with a login, replaced whole) and the arguments of `exec:` and `echo:` sources are masked in the log and the event
   and never written to entity attributes. The card gets back the source it sent, to match recordings to cards.
 - Any logged-in user can start and stop recordings and download them through Home Assistant media.
 
