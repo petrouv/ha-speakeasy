@@ -45,7 +45,7 @@ async def test_info_after_entry_removed(
     msg = await client.receive_json()
     assert msg["success"]
     assert msg["result"] == {
-        "version": "0.1.0",
+        "version": "0.1.1",
         "protocol": 1,
         "features": ["record"],
         "configured": False,
@@ -350,6 +350,13 @@ async def test_action_input_errors_are_not_server_errors(
     assert (await response.json())["message"] == (
         "This source has no recording running, ending, being saved or starting"
     )
+    # Only the configured go2rtc: another address is refused before anything is sent.
+    response = await client.post(
+        f"/api/services/{DOMAIN}/record_start",
+        json={"url": "door", "server": "http://attacker.example:1984"},
+    )
+    assert response.status == 400
+    assert "configured go2rtc address" in (await response.json())["message"]
     assert "Error during service call" not in caplog.text
 
 

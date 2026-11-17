@@ -535,9 +535,12 @@ class RecordingManager:
             await _wait_connected(existing)
             return existing
 
+        # Always the configured go2rtc: Home Assistant sends it the camera's stream
+        # source, credentials included, so a caller must not point it elsewhere.
+        # `server` is only accepted as that same address, as the card may send it.
         server = self.entry.data[CONF_URL]
-        if source.server and (server := clean_url(source.server)) is None:
-            raise RecordingError("invalid_source", "server is not a URL")
+        if source.server and clean_url(source.server) != server:
+            raise RecordingError("invalid_source", "server is not the configured go2rtc address")
         check = _Check(source.key)
         self._checks.append(check)
         try:
@@ -736,7 +739,8 @@ class RecordingManager:
         return source_name(source.url or "")
 
     async def _check_disk(self, folder: Path) -> None:
-        free = await self.hass.async_add_executor_job(_free_bytes, _existing_parent(folder))
+        # `_existing_parent` touches the disk too: both run in the executor.
+        free = await self.hass.async_add_executor_job(lambda: _free_bytes(_existing_parent(folder)))
         if free < self.min_free_bytes:
             gigabytes = f"{free / GIGABYTE:.1f}"
             raise RecordingError("disk_low", f"{gigabytes} GB free", free=gigabytes)

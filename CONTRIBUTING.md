@@ -18,7 +18,7 @@ The card talks to the integration over these Home Assistant WebSocket commands; 
 | Command | Reply |
 |---|---|
 | `speakeasy/info` | `{version, protocol, features, configured}`. `unknown_command`: the integration is not loaded (not installed, no enabled entry since Home Assistant started, or still starting). `configured: false`: the entry was removed, disabled or unloaded, failed to set up, or a leftover `speakeasy:` YAML key loaded the integration without one; start and stop then fail with `not_configured`, the subscription works. |
-| `speakeasy/record/start` `{source: {url \| entity, server?, record_url?}}` | `{id, started_at}` at the first data. `entity` comes back lowercased in every reply and event, `url` and `server` as sent. |
+| `speakeasy/record/start` `{source: {url \| entity, server?, record_url?}}` | `{id, started_at}` at the first data. `entity` comes back lowercased in every reply and event, `url` and `server` as sent. `server` other than the configured go2rtc address fails with `invalid_source`. |
 | `speakeasy/record/stop` `{recording_id}` | `{id, filename, media_content_id, duration, size, reason, finalized}` once the file is saved. `size` is in bytes, `0` when the file could not be read. |
 | `speakeasy/record/subscribe` | Recording events, while the integration is loaded, with an entry or not; stays open while the entry is removed, disabled, reloaded or added. |
 

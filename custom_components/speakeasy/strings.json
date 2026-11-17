@@ -57,7 +57,7 @@
       "message": "Speakeasy is not running: it is not set up, is disabled or is reloading."
     },
     "invalid_source": {
-      "message": "The source is invalid: it needs either a url or a camera, a url and a record_url that are not empty, and a server only as a URL."
+      "message": "The source is invalid: it needs either a url or a camera, a url and a record_url that are not empty, and a server only as the configured go2rtc address."
     },
     "camera_not_found": {
       "message": "There is no camera {entity}."
@@ -117,7 +117,7 @@
         },
         "server": {
           "name": "go2rtc address",
-          "description": "Another go2rtc instance instead of the configured one."
+          "description": "Optional; must be the configured go2rtc address, the only one Speakeasy records from."
         },
         "record_url": {
           "name": "Record from",

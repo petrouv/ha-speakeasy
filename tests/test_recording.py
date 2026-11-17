@@ -293,6 +293,28 @@ async def test_second_start_returns_running_recording(
     await manager(loaded).async_stop_all()
 
 
+async def test_server_other_than_configured_is_refused(
+    hass: HomeAssistant, loaded: MockConfigEntry, go2rtc: FakeGo2rtc
+) -> None:
+    """A camera's stream source, credentials included, never goes to another go2rtc."""
+    with patch.object(
+        recorder, "async_get_stream_source", return_value="rtsp://u:p@cam/ch1"
+    ) as get_source:
+        for server in ("http://attacker.example:1984", "not a url", f"{go2rtc.url}/other"):
+            with pytest.raises(RecordingError) as err:
+                await manager(loaded).async_start(Source(entity="camera.door", server=server))
+            assert err.value.code == "invalid_source"
+        get_source.assert_not_awaited()
+        assert go2rtc.requests == []
+        # The configured address, as the card may write it, is accepted.
+        rec = await manager(loaded).async_start(
+            Source(entity="camera.door", server=f" {go2rtc.url}/stream.html?src=x ")
+        )
+    assert rec.server == go2rtc.url
+    assert len(go2rtc.requests) == 1
+    await manager(loaded).async_stop_all()
+
+
 async def test_start_after_a_stop_begins_a_new_recording(
     hass: HomeAssistant,
     loaded: MockConfigEntry,

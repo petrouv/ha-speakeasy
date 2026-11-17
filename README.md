@@ -29,8 +29,10 @@ The **Record** button needs the [Speakeasy card](https://github.com/petrouv/ha-s
 ## Configuration
 
 **Settings → Devices & services → Add integration → Speakeasy**, then the go2rtc address. The form suggests the server
-set in WebRTC Camera, or its fallback `http://localhost:1984`; an address copied from the go2rtc web UI works as is. A
-card or an action can name another go2rtc with `server`.
+set in WebRTC Camera, or its fallback `http://localhost:1984`; an address copied from the go2rtc web UI works as is.
+Recordings always come from this go2rtc: a card or an action may pass `server` only as this same address (a card
+configured with another `server` cannot record), since Home Assistant sends go2rtc the camera's stream source with its
+credentials.
 
 **Reconfigure** changes the address. It reloads the integration, which ends recordings in progress.
 
@@ -142,7 +144,7 @@ Each returns a response when called with one.
 
 | Action | Fields | Description |
 |---|---|---|
-| `speakeasy.record_start` | `url` or `entity_id`, optional `server`, `record_url` | Starts a recording, or returns the running one. Replies at the first data: `{id, started_at}`. |
+| `speakeasy.record_start` | `url` or `entity_id`, optional `server` (only the configured address), `record_url` | Starts a recording, or returns the running one. Replies at the first data: `{id, started_at}`. |
 | `speakeasy.record_stop` | `url` or `entity_id`, optional `server` | Stops the source's recording and replies at once with `{id}`: the recording whose outcome is pending (running or ending, else the newest one saving). The file is saved in the background, then `speakeasy_recording_finished` fires. A start still waiting for data is cancelled with `stopped`; when that is all the source has, `id` is `null`. Fails with `not_found` when the source has nothing to stop. |
 | `speakeasy.record_stop_all` | — | Stops every recording and every start waiting for data. Replies at once with `{ids}`: every recording whose outcome is pending, oldest first, including ones already ending or saving. |
 

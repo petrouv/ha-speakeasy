@@ -22,7 +22,7 @@ from homeassistant.helpers import config_validation as cv
 
 from .const import DOMAIN
 from .go2rtc import clean_url
-from .recorder import Source, async_get_manager
+from .recorder import RecordingError, Source, async_get_manager
 
 SERVICE_RECORD_START = "record_start"
 SERVICE_RECORD_STOP = "record_stop"
@@ -97,7 +97,15 @@ def async_setup_services(hass: HomeAssistant) -> None:
             )
         # Waits for an ending recording of the source (stopped, or ended by itself) to close
         # its file, then for go2rtc's first data; never for the new recording to end.
-        recording = await manager.async_start(source)
+        try:
+            recording = await manager.async_start(source)
+        except RecordingError as err:
+            # A `server` other than the configured go2rtc is the caller's mistake: a 400.
+            if err.code == "invalid_source":
+                raise ServiceValidationError(
+                    translation_domain=DOMAIN, translation_key="invalid_source"
+                ) from None
+            raise
         return {"id": recording.id, "started_at": recording.started_at.isoformat()}
 
     async def record_stop(call: ServiceCall) -> ServiceResponse:
