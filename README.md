@@ -20,8 +20,7 @@ connection does not stop them.
 
 [![Open your Home Assistant instance and open this repository in HACS.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=petrouv&repository=ha-speakeasy&category=integration)
 
-Without the button: in HACS open **⋮ → Custom repositories**, add `https://github.com/petrouv/ha-speakeasy` as
-**Integration**, download **Speakeasy** and restart Home Assistant. Manually: copy `custom_components/speakeasy` to
+Without the button: search HACS for **Speakeasy**, download it and restart Home Assistant. Manually: copy `custom_components/speakeasy` to
 `config/custom_components/` and restart.
 
 The **Record** button needs the [Speakeasy card](https://github.com/petrouv/ha-speakeasy-card) 0.2.0 or newer.
